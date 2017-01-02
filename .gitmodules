@@ -1,0 +1,4 @@
+[submodule "bolos-user-interface"]
+	path = bolos-user-interface
+	url = https://github.com/parkerhoyes/bolos-user-interface.git
+	branch = master

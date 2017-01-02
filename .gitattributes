@@ -5,6 +5,7 @@
 #     Git files
 .gitattributes text diff
 .gitignore text diff
+.gitmodules text diff
 
 #     Source files
 *.c text diff
