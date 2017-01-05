@@ -34,20 +34,24 @@
 
 static const uint16_t app_snake_growth_limit[] = {20, 30, 40, 50, APP_MAX_SNAKE_LEN};
 
-app_mode_e app_mode;
-uint32_t app_game_tickn;
-uint16_t app_snake_len;
-app_pos_t app_snake_pos[APP_MAX_SNAKE_LEN];
-uint16_t app_snake_pos_offset;
-app_dir_e app_snake_dir;
-bool app_snake_turn_cooldown;
-uint8_t app_snake_speed; // Must be >= 1 and <= 5
-int8_t app_snake_to_grow;
-app_pos_t app_coins[APP_MAX_NCOINS];
-uint8_t app_ncoins;
-uint8_t app_dead_tickn;
+static bui_bitmap_128x32_t app_disp_buffer;
+static signed char app_disp_progress;
+
+static app_mode_e app_mode;
+static uint32_t app_game_tickn;
+static uint16_t app_snake_len;
+static app_pos_t app_snake_pos[APP_MAX_SNAKE_LEN];
+static uint16_t app_snake_pos_offset;
+static app_dir_e app_snake_dir;
+static bool app_snake_turn_cooldown;
+static uint8_t app_snake_speed; // Must be >= 1 and <= 5
+static int8_t app_snake_to_grow;
+static app_pos_t app_coins[APP_MAX_NCOINS];
+static uint8_t app_ncoins;
+static uint8_t app_dead_tickn;
 
 void app_init() {
+	app_disp_progress = -1;
 	app_mode_menu();
 
 	// Set a ticker interval of APP_TICK_INTERVAL ms
@@ -121,10 +125,11 @@ void app_tick() {
 			app_dead_tickn += 1;
 		break;
 	}
-	bui_fill(false);
-	app_draw();
-	bui_flush();
-	bui_display();
+	if (app_disp_progress == -1) {
+		bui_fill(&app_disp_buffer, false);
+		app_draw();
+		app_disp_progress = bui_display(&app_disp_buffer, 0);
+	}
 }
 
 void app_game_tick() {
@@ -220,47 +225,52 @@ uint8_t app_int_to_str(int32_t i, uint8_t *str) {
 }
 
 void app_draw_header(const unsigned char *text) {
-	bui_draw_string(text, 64, 0, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP, BUI_FONT_OPEN_SANS_BOLD_13);
+	bui_draw_string(&app_disp_buffer, text, 64, 0, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
+			BUI_FONT_OPEN_SANS_BOLD_13);
 }
 
 void app_draw_line1(const unsigned char *text) {
-	bui_draw_string(text, 64, 15, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
+	bui_draw_string(&app_disp_buffer, text, 64, 15, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
+			BUI_FONT_LUCIDA_CONSOLE_8);
 }
 
 void app_draw_line2(const unsigned char *text) {
-	bui_draw_string(text, 64, 24, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
+	bui_draw_string(&app_disp_buffer, text, 64, 24, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
+			BUI_FONT_LUCIDA_CONSOLE_8);
 }
 
 void app_draw_cross() {
-	bui_draw_bitmap(bui_bitmap_cross_bitmap, bui_bitmap_cross_w, 0, 0, 3, 12, bui_bitmap_cross_w, bui_bitmap_cross_h);
+	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_cross_bitmap, bui_bitmap_cross_w, 0, 0, 3, 12, bui_bitmap_cross_w,
+			bui_bitmap_cross_h);
 }
 
 void app_draw_check() {
-	bui_draw_bitmap(bui_bitmap_check_bitmap, bui_bitmap_check_w, 0, 0, 117, 13, bui_bitmap_check_w, bui_bitmap_check_h);
+	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_check_bitmap, bui_bitmap_check_w, 0, 0, 117, 13, bui_bitmap_check_w,
+			bui_bitmap_check_h);
 }
 
 void app_draw_snake() {
 	for (uint16_t i = 0; i < app_snake_len; i++) {
 		app_pos_t pos = app_get_snake_pos(i);
-		bui_set_pixel(pos.x, pos.y, true);
+		bui_set_pixel(&app_disp_buffer, pos.x, pos.y, true);
 	}
 }
 
 void app_draw_coins() {
 	for (uint8_t i = 0; i < app_ncoins; i++) {
 		app_pos_t pos = app_coins[i];
-		bui_set_pixel(pos.x, pos.y, true);
+		bui_set_pixel(&app_disp_buffer, pos.x, pos.y, true);
 	}
 }
 
 void app_draw_badge_dashboard() {
-	bui_draw_bitmap(bui_bitmap_badge_dashboard_bitmap, bui_bitmap_badge_dashboard_w, 0, 0, 1, 9,
+	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_badge_dashboard_bitmap, bui_bitmap_badge_dashboard_w, 0, 0, 1, 9,
 			bui_bitmap_badge_dashboard_w, bui_bitmap_badge_dashboard_h);
 }
 
 void app_draw_badge_cross() {
-	bui_draw_bitmap(bui_bitmap_badge_cross_bitmap, bui_bitmap_badge_cross_w, 0, 0, 113, 9, bui_bitmap_badge_cross_w,
-			bui_bitmap_badge_cross_h);
+	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_badge_cross_bitmap, bui_bitmap_badge_cross_w, 0, 0, 113, 9,
+			bui_bitmap_badge_cross_w, bui_bitmap_badge_cross_h);
 }
 
 void app_draw_stats() {
@@ -427,6 +437,6 @@ void app_event_ticker() {
 }
 
 void app_event_display_processed() {
-	bui_display_processed();
-	bui_display();
+	if (app_disp_progress != -1)
+		app_disp_progress = bui_display(&app_disp_buffer, app_disp_progress);
 }
