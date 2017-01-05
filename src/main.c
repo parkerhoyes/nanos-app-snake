@@ -152,8 +152,6 @@ __attribute__((section(".boot"))) int main() {
 	// Exit critical section
 	__asm volatile("cpsie i");
 
-	bui_init();
-
 	// Ensure exception will work as planned
 	os_boot();
 
