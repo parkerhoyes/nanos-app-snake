@@ -58,9 +58,9 @@ PROG := token
 
 CONFIG_PRODUCTIONS := bin/$(PROG)
 
-SOURCE_PATH := src bolos-user-interface/src $(BOLOS_SDK)/src $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.c$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.c$$"))
+SOURCE_PATH := src bui/src $(BOLOS_SDK)/src $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.c$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.c$$"))
 SOURCE_FILES := $(foreach path, $(SOURCE_PATH),$(shell find $(path) | grep "\.c$$") )
-INCLUDES_PATH := include bolos-user-interface/include $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.h$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.h$$")) $(BOLOS_SDK)/include $(BOLOS_SDK)/include/arm
+INCLUDES_PATH := include bui/include $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.h$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.h$$")) $(BOLOS_SDK)/include $(BOLOS_SDK)/include/arm
 
 # Platform definitions
 DEFINES := ST31 gcc __IO=volatile
