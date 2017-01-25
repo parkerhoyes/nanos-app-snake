@@ -178,8 +178,8 @@ void app_game_tick() {
 	}
 	for (uint8_t i = 0; i < app_ncoins; i++) {
 		if (app_snake_intersects(app_coins[i])) {
-			for (uint8_t j = i; i < app_ncoins - 1; i++) {
-				app_coins[i] = app_coins[i + 1];
+			for (uint8_t j = i; j < app_ncoins - 1; j++) {
+				app_coins[j] = app_coins[j + 1];
 			}
 			app_ncoins -= 1;
 			if (app_snake_len + app_snake_to_grow < app_snake_growth_limit[app_snake_speed - 1]) {
