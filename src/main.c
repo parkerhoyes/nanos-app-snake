@@ -21,11 +21,10 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
+#include <stdbool.h>
+
 #include "os.h"
 #include "os_io_seproxyhal.h"
-
-#include "bui.h"
-#include "bui_font.h"
 
 #include "app.h"
 

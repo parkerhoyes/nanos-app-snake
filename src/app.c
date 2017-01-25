@@ -31,11 +31,12 @@
 #include "syscalls.h"
 
 #include "bui.h"
+#include "bui_font.h"
 
 static const uint16_t app_snake_growth_limit[] = {20, 30, 40, 50, APP_MAX_SNAKE_LEN};
 
 static bui_bitmap_128x32_t app_disp_buffer;
-static signed char app_disp_progress;
+static int8_t app_disp_progress;
 
 static app_mode_e app_mode;
 static uint32_t app_game_tickn;
@@ -201,14 +202,14 @@ void app_game_tick() {
 	app_game_tickn += 1;
 }
 
-uint8_t app_int_to_str(int32_t i, uint8_t *str) {
+uint8_t app_int_to_str(int32_t i, char *dest) {
 	if (i == 0) {
-		*str++ = '0';
+		*dest++ = '0';
 		return 1;
 	}
 	uint8_t len = 0;
 	if (i < 0) {
-		*str++ = '-';
+		*dest++ = '-';
 		len += 1;
 		i = -i;
 	}
@@ -218,25 +219,22 @@ uint8_t app_int_to_str(int32_t i, uint8_t *str) {
 		digits[ndigits++] = i % 10;
 	}
 	for (int j = ndigits - 1; j != -1; j--) {
-		*str++ = '0' + digits[j];
+		*dest++ = '0' + digits[j];
 	}
 	len += ndigits;
 	return len;
 }
 
-void app_draw_header(const unsigned char *text) {
-	bui_draw_string(&app_disp_buffer, text, 64, 0, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
-			BUI_FONT_OPEN_SANS_BOLD_13);
+void app_draw_header(const char *text) {
+	bui_font_draw_string(&app_disp_buffer, text, 64, 0, BUI_DIR_TOP, BUI_FONT_OPEN_SANS_BOLD_13);
 }
 
-void app_draw_line1(const unsigned char *text) {
-	bui_draw_string(&app_disp_buffer, text, 64, 15, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
-			BUI_FONT_LUCIDA_CONSOLE_8);
+void app_draw_line1(const char *text) {
+	bui_font_draw_string(&app_disp_buffer, text, 64, 15, BUI_DIR_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
 }
 
-void app_draw_line2(const unsigned char *text) {
-	bui_draw_string(&app_disp_buffer, text, 64, 24, BUI_HORIZONTAL_ALIGN_CENTER | BUI_VERTICAL_ALIGN_TOP,
-			BUI_FONT_LUCIDA_CONSOLE_8);
+void app_draw_line2(const char *text) {
+	bui_font_draw_string(&app_disp_buffer, text, 64, 24, BUI_DIR_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
 }
 
 void app_draw_cross() {
@@ -274,8 +272,8 @@ void app_draw_badge_cross() {
 }
 
 void app_draw_stats() {
-	uint8_t str_buf[30];
-	uint8_t *str_ptr;
+	char str_buf[30];
+	char *str_ptr;
 	// Draw line 1 - maximum length 11
 	str_ptr = str_buf;
 	os_memcpy(str_buf, "length: ", 8);
