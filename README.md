@@ -1,19 +1,21 @@
-# Ledger Nano S Snake Game Application
+# Ledger Nano S Snake Game Application v1.0.3
 
 This repository contains an implementation of the popular game Snake for the
 [Ledger Nano S](https://github.com/LedgerHQ/ledger-nano-s).
 
 The purpose of this app is to demonstrate the capabilities of
 [BUI](https://github.com/parkerhoyes/bolos-user-interface), the graphics library
-I created as an alternative to the standard BAGL that's a part of the official
-SDK. This app makes use of two fonts, Lucida Console 8px and Open Sans Bold
-13px, neither of which are currently available through BAGL for the Nano S, as
-well as some standard icons that are available from BAGL. The display for this
-application is rendered 50 times per second entirely using the BUI API.
-Internally, BUI double-buffers the display and manages communications with the
-MCU, meaning all the application has to do is render each frame. This is a good
-stress-test of the communication link between the MCU which manages peripherals
-and the Secure Element onto which applications are loaded.
+I created which allows applications to custom render their displays rather than
+delegate the task to the MCU using BAGL, which greatly simplifies the rendering
+process for complicated UIs, such as this one. This app makes use of two fonts,
+Lucida Console 8px and Open Sans Bold 13px, neither of which are currently
+available through BAGL for the Nano S due to memory constraints on the MCU.
+
+The display for this application is rendered at 50 FPS entirely using the BUI
+API. Internally, BUI maintains a display buffer and manages communications with
+the MCU. This app is a good stress-test of the communication link between the
+MCU which manages peripherals and the Secure Element onto which applications are
+loaded.
 
 If you'd like to learn how to use BUI, this application's source code is a good
 place to start.
