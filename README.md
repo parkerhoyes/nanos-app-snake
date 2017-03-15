@@ -1,4 +1,4 @@
-# Ledger Nano S Snake Game Application
+# Ledger Nano S Snake Game Application v1.0.3
 
 This repository contains an implementation of the popular game Snake for the
 [Ledger Nano S](https://github.com/LedgerHQ/ledger-nano-s).
