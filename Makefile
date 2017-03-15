@@ -25,14 +25,26 @@
 # END USER CONFIGURATION
 
 ifndef BOLOS_ENV
-DUMMY := $(error BOLOS_ENV is undefined)
+$(error BOLOS_ENV is undefined)
 endif
 ifndef BOLOS_SDK
-DUMMY := $(error BOLOS_SDK is undefined)
+$(error BOLOS_SDK is undefined)
+endif
+
+$(info BOLOS_ENV=$(BOLOS_ENV))
+$(info BOLOS_SDK=$(BOLOS_SDK))
+
+# Extract TARGET_ID from the SDK
+TARGET_ID := $(shell cat $(BOLOS_SDK)/include/bolos_target.h | grep 0x | cut -f3 -d' ')
+
+$(info TARGET_ID=$(TARGET_ID))
+
+# Verify TARGET_ID
+ifneq ($(TARGET_ID),0x31100002)
+$(error TARGET_ID must be 0x31100002)
 endif
 
 APPNAME = "Snake"
-TARGET_ID = 0x31100002 # Nano S
 APP_LOAD_PARAMS := --appFlags 0x00 --icon "$(shell python $(BOLOS_SDK)/icon.py 16 16 glyphs/app-icon.gif hexbitmaponly)"
 
 ################
@@ -58,9 +70,9 @@ PROG := token
 
 CONFIG_PRODUCTIONS := bin/$(PROG)
 
-SOURCE_PATH := src bui/src $(BOLOS_SDK)/src $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.c$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.c$$"))
+SOURCE_PATH := src bui/src $(BOLOS_SDK)/src $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.c$$"))
 SOURCE_FILES := $(foreach path, $(SOURCE_PATH),$(shell find $(path) | grep "\.c$$") )
-INCLUDES_PATH := include bui/include $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.h$$")) $(dir $(shell find $(BOLOS_SDK)/lib_bluenrg* | grep "\.h$$")) $(BOLOS_SDK)/include $(BOLOS_SDK)/include/arm
+INCLUDES_PATH := include bui/include $(BOLOS_SDK)/include $(BOLOS_SDK)/include/arm $(dir $(shell find $(BOLOS_SDK)/lib_stusb* | grep "\.h$$"))
 
 # Platform definitions
 DEFINES := ST31 gcc __IO=volatile
@@ -68,13 +80,9 @@ DEFINES := ST31 gcc __IO=volatile
 DEFINES += OS_IO_SEPROXYHAL IO_SEPROXYHAL_BUFFER_SIZE_B=300
 DEFINES += HAVE_BAGL HAVE_PRINTF
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
-DEFINES += HAVE_BLE HAVE_BLUENRG HCI_READ_PACKET_NUM_MAX=3 BLUENRG_MS HCI_READ_PACKET_SIZE=72
 #DEFINES += PRINTF=screen_printf
 DEFINES += PRINTF\(...\)=
 DEFINES += UNUSED\(x\)=\(void\)x
-
-# BUI configuration definitions
-DEFINES += BUI_FONT_CHOOSE BUI_FONT_INCLUDE_LUCIDA_CONSOLE_8 BUI_FONT_INCLUDE_OPEN_SANS_BOLD_13
 
 ############
 # Compiler #
@@ -146,7 +154,7 @@ log = $(if $(strip $(VERBOSE)),$1,@$1)
 default: prepare bin/$(PROG)
 
 load: default
-	python -m ledgerblue.loadApp --targetId $(TARGET_ID) --apdu --fileName bin/$(PROG).hex --appName $(APPNAME) $(APP_LOAD_PARAMS)
+	python -m ledgerblue.loadApp --targetId $(TARGET_ID) --fileName bin/$(PROG).hex --appName $(APPNAME) $(APP_LOAD_PARAMS)
 
 delete:
 	python -m ledgerblue.deleteApp --targetId $(TARGET_ID) --appName $(APPNAME)
