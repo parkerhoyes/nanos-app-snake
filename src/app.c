@@ -35,8 +35,9 @@
 
 static const uint16_t app_snake_growth_limit[] = {20, 30, 40, 50, APP_MAX_SNAKE_LEN};
 
-static bui_bitmap_128x32_t app_disp_buffer;
-static int8_t app_disp_progress;
+static bui_ctx_t app_bui_ctx;
+static bool app_disp_invalidated; // true if the display needs to be redrawn
+static bool app_seproxy_ready; // true if the MCU is ready to receive a status
 
 static app_mode_e app_mode;
 static uint32_t app_game_tickn;
@@ -52,9 +53,6 @@ static uint8_t app_ncoins;
 static uint8_t app_dead_tickn;
 
 void app_init() {
-	app_disp_progress = -1;
-	app_mode_menu();
-
 	// Set a ticker interval of APP_TICK_INTERVAL ms
 	G_io_seproxyhal_spi_buffer[0] = SEPROXYHAL_TAG_SET_TICKER_INTERVAL;
 	G_io_seproxyhal_spi_buffer[1] = 0;
@@ -63,6 +61,12 @@ void app_init() {
 	G_io_seproxyhal_spi_buffer[4] = APP_TICK_INTERVAL;
 	io_seproxyhal_spi_send(G_io_seproxyhal_spi_buffer, 5);
 
+	// Initialize global vars
+	bui_ctx_init(&app_bui_ctx);
+	app_disp_invalidated = true;
+	app_seproxy_ready = true;
+	app_mode_menu();
+
 	// First app tick
 	app_tick();
 }
@@ -70,6 +74,8 @@ void app_init() {
 void app_mode_menu() {
 	// Set globals
 	app_mode = APP_MODE_MENU;
+
+	app_disp_invalidated = true;
 }
 
 void app_mode_start() {
@@ -92,22 +98,30 @@ void app_mode_start() {
 	app_snake_to_grow = 0;
 	os_memset(app_coins, 0, sizeof(app_coins));
 	app_ncoins = 0;
+
+	app_disp_invalidated = true;
 }
 
 void app_game_pause() {
 	// Set globals
 	app_mode = APP_MODE_PAUSED;
+
+	app_disp_invalidated = true;
 }
 
 void app_mode_unpause() {
 	// Set globals
 	app_mode = APP_MODE_PLAYING;
+
+	app_disp_invalidated = true;
 }
 
 void app_mode_die() {
 	// Set globals
 	app_mode = APP_MODE_DEAD;
 	app_dead_tickn = 0;
+
+	app_disp_invalidated = true;
 }
 
 void app_tick() {
@@ -122,14 +136,18 @@ void app_tick() {
 		// Do nothing
 		break;
 	case APP_MODE_DEAD:
-		if (app_dead_tickn != APP_DEATH_WAIT)
+		if (app_dead_tickn != APP_DEATH_WAIT) {
 			app_dead_tickn += 1;
+			app_disp_invalidated = true;
+		}
 		break;
 	}
-	if (app_disp_progress == -1) {
-		bui_fill(&app_disp_buffer, false);
+	if (app_disp_invalidated) {
+		bui_ctx_fill(&app_bui_ctx, false);
 		app_draw();
-		app_disp_progress = bui_display(&app_disp_buffer, 0);
+		if (app_seproxy_ready)
+			app_seproxy_ready = !bui_ctx_display(&app_bui_ctx);
+		app_disp_invalidated = false;
 	}
 }
 
@@ -200,6 +218,7 @@ void app_game_tick() {
 		app_coins[app_ncoins++] = new_coin;
 	}
 	app_game_tickn += 1;
+	app_disp_invalidated = true;
 }
 
 uint8_t app_int_to_str(int32_t i, char *dest) {
@@ -226,49 +245,45 @@ uint8_t app_int_to_str(int32_t i, char *dest) {
 }
 
 void app_draw_header(const char *text) {
-	bui_font_draw_string(&app_disp_buffer, text, 64, 0, BUI_DIR_TOP, BUI_FONT_OPEN_SANS_BOLD_13);
+	bui_font_draw_string(&app_bui_ctx, text, 64, 0, BUI_DIR_TOP, bui_font_open_sans_bold_13);
 }
 
 void app_draw_line1(const char *text) {
-	bui_font_draw_string(&app_disp_buffer, text, 64, 15, BUI_DIR_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
+	bui_font_draw_string(&app_bui_ctx, text, 64, 15, BUI_DIR_TOP, bui_font_lucida_console_8);
 }
 
 void app_draw_line2(const char *text) {
-	bui_font_draw_string(&app_disp_buffer, text, 64, 24, BUI_DIR_TOP, BUI_FONT_LUCIDA_CONSOLE_8);
+	bui_font_draw_string(&app_bui_ctx, text, 64, 24, BUI_DIR_TOP, bui_font_lucida_console_8);
 }
 
 void app_draw_cross() {
-	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_cross_bitmap, bui_bitmap_cross_w, 0, 0, 3, 12, bui_bitmap_cross_w,
-			bui_bitmap_cross_h);
+	bui_ctx_draw_mbitmap_full(&app_bui_ctx, BUI_BITMAP_ICON_CROSS, 3, 12);
 }
 
 void app_draw_check() {
-	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_check_bitmap, bui_bitmap_check_w, 0, 0, 117, 13, bui_bitmap_check_w,
-			bui_bitmap_check_h);
+	bui_ctx_draw_mbitmap_full(&app_bui_ctx, BUI_BITMAP_ICON_CHECK, 117, 13);
 }
 
 void app_draw_snake() {
 	for (uint16_t i = 0; i < app_snake_len; i++) {
 		app_pos_t pos = app_get_snake_pos(i);
-		bui_set_pixel(&app_disp_buffer, pos.x, pos.y, true);
+		bui_ctx_draw_pixel(&app_bui_ctx, pos.x, pos.y, true);
 	}
 }
 
 void app_draw_coins() {
 	for (uint8_t i = 0; i < app_ncoins; i++) {
 		app_pos_t pos = app_coins[i];
-		bui_set_pixel(&app_disp_buffer, pos.x, pos.y, true);
+		bui_ctx_draw_pixel(&app_bui_ctx, pos.x, pos.y, true);
 	}
 }
 
 void app_draw_badge_dashboard() {
-	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_badge_dashboard_bitmap, bui_bitmap_badge_dashboard_w, 0, 0, 1, 9,
-			bui_bitmap_badge_dashboard_w, bui_bitmap_badge_dashboard_h);
+	bui_ctx_draw_mbitmap_full(&app_bui_ctx, BUI_BITMAP_BADGE_DASHBOARD, 1, 9);
 }
 
 void app_draw_badge_cross() {
-	bui_draw_bitmap(&app_disp_buffer, bui_bitmap_badge_cross_bitmap, bui_bitmap_badge_cross_w, 0, 0, 113, 9,
-			bui_bitmap_badge_cross_w, bui_bitmap_badge_cross_h);
+	bui_ctx_draw_mbitmap_full(&app_bui_ctx, BUI_BITMAP_BADGE_CROSS, 113, 9);
 }
 
 void app_draw_stats() {
@@ -435,6 +450,5 @@ void app_event_ticker() {
 }
 
 void app_event_display_processed() {
-	if (app_disp_progress != -1)
-		app_disp_progress = bui_display(&app_disp_buffer, app_disp_progress);
+	app_seproxy_ready = !bui_ctx_display(&app_bui_ctx);
 }
